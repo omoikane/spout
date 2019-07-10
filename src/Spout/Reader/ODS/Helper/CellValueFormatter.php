@@ -96,26 +96,39 @@ class CellValueFormatter
         $pNodes = $node->getElementsByTagName(self::XML_NODE_P);
 
         foreach ($pNodes as $pNode) {
-            $currentPValue = '';
-
-            foreach ($pNode->childNodes as $childNode) {
-                if ($childNode instanceof \DOMText) {
-                    $currentPValue .= $childNode->nodeValue;
-                } else if ($childNode->nodeName === self::XML_NODE_S) {
-                    $spaceAttribute = $childNode->getAttribute(self::XML_ATTRIBUTE_C);
-                    $numSpaces = (!empty($spaceAttribute)) ? intval($spaceAttribute) : 1;
-                    $currentPValue .= str_repeat(' ', $numSpaces);
-                } else if ($childNode->nodeName === self::XML_NODE_A || $childNode->nodeName === self::XML_NODE_SPAN) {
-                    $currentPValue .= $childNode->nodeValue;
-                }
-            }
-
-            $pNodeValues[] = $currentPValue;
+            $pNodeValues[] = $this->extractTextFromNode($pNode);
         }
 
         $escapedCellValue = implode("\n", $pNodeValues);
         $cellValue = $this->escaper->unescape($escapedCellValue);
         return $cellValue;
+    }
+
+    /**
+     * @param $pNode
+     * @return string
+     */
+    protected function extractTextFromNode($pNode)
+    {
+        $currentPValue = '';
+
+        foreach ($pNode->childNodes as $childNode) {
+            if ($childNode instanceof \DOMText) {
+                $currentPValue .= $childNode->nodeValue;
+            } else {
+                if ($childNode->nodeName === self::XML_NODE_S) {
+                    $spaceAttribute = $childNode->getAttribute(self::XML_ATTRIBUTE_C);
+                    $numSpaces = (!empty($spaceAttribute)) ? intval($spaceAttribute) : 1;
+                    $currentPValue .= str_repeat(' ', $numSpaces);
+                } else {
+                    if ($childNode->nodeName === self::XML_NODE_A || $childNode->nodeName === self::XML_NODE_SPAN) {
+                        $currentPValue .= $this->extractTextFromNode($childNode);
+                    }
+                }
+            }
+        }
+
+        return $currentPValue;
     }
 
     /**
